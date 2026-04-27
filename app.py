@@ -2,11 +2,14 @@ import os
 from flask import Flask, request, send_file, jsonify
 from flask_cors import CORS
 import yt_dlp
+import imageio_ffmpeg
 
 app = Flask(__name__)
 CORS(app)
 
-# --- Rota Raiz (Acaba com o Erro 404) ---
+# Esse comando busca o executável do FFmpeg que a biblioteca baixou para nós
+ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+
 @app.route('/', methods=['GET'])
 def index():
     return jsonify({
@@ -14,7 +17,6 @@ def index():
         "mensagem": "Sua API de Download do YouTube está rodando perfeitamente!"
     })
 
-# --- Rota de Download ---
 @app.route('/download', methods=['GET'])
 def download():
     video_url = request.args.get('url')
@@ -26,19 +28,23 @@ def download():
         return jsonify({"error": "Nenhuma URL fornecida"}), 400
 
     out_tmpl = 'output.%(ext)s'
-    
-    # Se o usuário não definiu tempo final, não usamos o parâmetro de corte
     download_sections = f"*{start_time}-{end_time}" if end_time else f"*{start_time}-inf"
 
-    # Configurações otimizadas para o Cliente Android
+    # Regra de formato blindada: Tenta juntar separado, se falhar pega o melhor arquivo único
+    if format_type == 'mp4':
+        format_selector = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
+    else:
+        format_selector = 'bestaudio/best'
+
     ydl_opts = {
-        # 'best' pega o melhor arquivo já combinado (video+audio) que o Android permite
-        'format': 'best' if format_type == 'mp4' else 'bestaudio/best',
+        'format': format_selector,
         'outtmpl': out_tmpl,
         'force_overwrites': True,
         'cookiefile': 'cookies.txt',
+        'ffmpeg_location': ffmpeg_path, # Aponta o motor de colagem para o yt-dlp
         'extractor_args': {
-            'youtube': ['player_client=android']
+            # Permite que ele tente a web mobile, o app e o site normal até conseguir os arquivos
+            'youtube': ['player_client=mweb,android,web']
         },
         'download_sections': download_sections,
         'postprocessors': [{
@@ -52,10 +58,9 @@ def download():
             ydl.download([video_url])
         
         file_ext = 'mp3' if format_type == 'mp3' else 'mp4'
-        # O yt-dlp pode salvar como .webm dependendo do que for o 'best', então buscamos o arquivo gerado
         filename = f"output.{file_ext}"
         
-        # Fallback caso o yt-dlp baixe em um formato diferente (como webm ou mkv)
+        # Procura o arquivo caso o formato final fuja do padrão
         if not os.path.exists(filename):
             for ext in ['webm', 'mkv', 'm4a']:
                 if os.path.exists(f"output.{ext}"):
