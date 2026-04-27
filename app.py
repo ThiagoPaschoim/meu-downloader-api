@@ -17,11 +17,13 @@ def download():
     out_tmpl = 'downloaded_video.%(ext)s'
     
     # Configurações do yt-dlp para baixar apenas o trecho (Trimming)
+# Configurações do yt-dlp para baixar apenas o trecho (Trimming)
     ydl_opts = {
         'format': 'bestvideo+bestaudio/best' if format_type == 'mp4' else 'bestaudio/best',
         'outtmpl': 'output',
         'force_overwrites': True,
         'download_sections': f"*{start_time}-{end_time}",
+        'cookiefile': 'cookies.txt',  # <--- NOVA LINHA ADICIONADA AQUI
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
