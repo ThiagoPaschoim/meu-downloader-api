@@ -20,14 +20,16 @@ def download():
 # Configurações do yt-dlp para baixar apenas o trecho (Trimming)
 # Configurações do yt-dlp para baixar apenas o trecho (Trimming)
 # Configurações do yt-dlp para baixar apenas o trecho (Trimming)
+# Configurações do yt-dlp para baixar apenas o trecho (Trimming)
     ydl_opts = {
-        'format': 'bestvideo+bestaudio/best' if format_type == 'mp4' else 'bestaudio/best',
+        # Modificado: Pede o melhor formato combinado (b) para MP4, ou o melhor áudio (ba) para MP3
+        'format': 'b[ext=mp4]/best' if format_type == 'mp4' else 'ba/bestaudio/best',
         'outtmpl': 'output',
         'force_overwrites': True,
         'download_sections': f"*{start_time}-{end_time}",
         'cookiefile': 'cookies.txt',
         'extractor_args': {
-            'youtube': ['player_client=android'] # <-- Modificado: Apenas Android, sem fallback para web
+            'youtube': ['player_client=android']
         },
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
